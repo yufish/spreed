@@ -13,6 +13,7 @@ var spreedPeerConnectionTable = [];
 
 	var previousUsersInRoom = [];
 	var usersInCallMapping = {};
+	var selfInCall = 0;
 
 	function updateParticipantsUI(currentUsersNo) {
 		'use strict';
@@ -35,6 +36,16 @@ var spreedPeerConnectionTable = [];
 				$appContentElement.addClass('with-app-sidebar');
 			}
 		}
+	}
+
+	function userHasStreams(user) {
+		var flags = user;
+		if (flags.hasOwnProperty('inCall')) {
+			flags = flags.inCall;
+		}
+		flags = flags || 0;
+		var REQUIRED_FLAGS = OCA.SpreedMe.app.FLAG_WITH_AUDIO | OCA.SpreedMe.app.FLAG_WITH_VIDEO;
+		return (flags & REQUIRED_FLAGS) !== 0;
 	}
 
 	function usersChanged(newUsers, disconnectedSessionIds) {
@@ -65,7 +76,7 @@ var spreedPeerConnectionTable = [];
 			// To avoid overloading the user joining a room (who previously called
 			// all the other participants), we decide who calls who by comparing
 			// the session ids of the users: "larger" ids call "smaller" ones.
-			if (sessionId < currentSessionId && !webrtc.webrtc.getPeers(sessionId, 'video').length) {
+			if (userHasStreams(selfInCall) && (!userHasStreams(user) || sessionId < currentSessionId) && !webrtc.webrtc.getPeers(sessionId, 'video').length) {
 				console.log("Starting call with", user);
 				peer = webrtc.webrtc.createPeer({
 					id: sessionId,
@@ -117,8 +128,8 @@ var spreedPeerConnectionTable = [];
 		var currentSessionId = webrtc.connection.getSessionid();
 		var currentUsersInRoom = [];
 		var userMapping = {};
-		var selfInCall = false;
 		var sessionId;
+		selfInCall = 0;
 		for (sessionId in users) {
 			if (!users.hasOwnProperty(sessionId)) {
 				continue;
@@ -129,7 +140,7 @@ var spreedPeerConnectionTable = [];
 			}
 
 			if (sessionId === currentSessionId) {
-				selfInCall = true;
+				selfInCall = user.inCall;
 				continue;
 			}
 
@@ -245,6 +256,13 @@ var spreedPeerConnectionTable = [];
 				if (!(typeof id === 'string' || id instanceof String)) {
 					return;
 				}
+
+				var user = usersInCallMapping[id];
+				if (user && !userHasStreams(user)) {
+					console.log("User has no stream", id);
+					return;
+				}
+
 				// Indicator for username
 				var userIndicator = document.createElement('div');
 				userIndicator.className = 'nameIndicator';

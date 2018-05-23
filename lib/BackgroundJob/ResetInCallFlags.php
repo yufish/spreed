@@ -69,7 +69,7 @@ class ResetInCallFlags extends TimedJob {
 			if ($participant->getLastPing() < $this->timeout) {
 				// TODO reset session too
 				if ($participant->isInCall()) {
-					$room->changeInCall($session, false);
+					$room->changeInCall($session, 0);
 				}
 			}
 		}
