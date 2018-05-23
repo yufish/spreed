@@ -26,6 +26,7 @@ use OCA\Spreed\AppInfo\Application;
 use OCA\Spreed\Config;
 use OCA\Spreed\Manager;
 use OCA\Spreed\Participant;
+use OCA\Spreed\Room;
 use OCA\Spreed\Signaling\BackendNotifier;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Http\Client\IClientService;
@@ -254,17 +255,17 @@ class BackendNotifierTest extends \Test\TestCase {
             'userId' => $this->userId,
             'sessionId' => $userSession,
         ]);
-        $room->changeInCall($userSession, true);
+        $room->changeInCall($userSession, Room::FLAG_IN_CALL | Room::FLAG_WITH_AUDIO | Room::FLAG_WITH_VIDEO);
 
         $request = $this->controller->getLastRequest();
         $body = $this->validateBackendRequest($this->baseUrl . '/api/v1/room/' . $room->getToken(), $request);
         $this->assertSame([
             'type' => 'incall',
             'incall' => [
-                'incall' => true,
+                'incall' => 7,
                 'changed' => [
                     [
-                        'inCall' => true,
+                        'inCall' => 7,
                         'lastPing' => 0,
                         'sessionId' => $userSession,
                         'participantType' => Participant::USER,
@@ -273,7 +274,7 @@ class BackendNotifierTest extends \Test\TestCase {
                 ],
                 'users' => [
                     [
-                        'inCall' => true,
+                        'inCall' => 7,
                         'lastPing' => 0,
                         'sessionId' => $userSession,
                         'participantType' => Participant::USER,
@@ -284,16 +285,16 @@ class BackendNotifierTest extends \Test\TestCase {
 
         $this->controller->clearLastRequest();
         $guestSession = $room->joinRoomGuest('');
-        $room->changeInCall($guestSession, true);
+        $room->changeInCall($guestSession, Room::FLAG_IN_CALL);
         $request = $this->controller->getLastRequest();
         $body = $this->validateBackendRequest($this->baseUrl . '/api/v1/room/' . $room->getToken(), $request);
         $this->assertSame([
             'type' => 'incall',
             'incall' => [
-                'incall' => true,
+                'incall' => 1,
                 'changed' => [
                     [
-                        'inCall' => true,
+                        'inCall' => 1,
                         'lastPing' => 0,
                         'sessionId' => $guestSession,
                         'participantType' => Participant::GUEST,
@@ -301,13 +302,13 @@ class BackendNotifierTest extends \Test\TestCase {
                 ],
                 'users' => [
                     [
-                        'inCall' => true,
+                        'inCall' => 7,
                         'lastPing' => 0,
                         'sessionId' => $userSession,
                         'participantType' => Participant::USER,
                     ],
                     [
-                        'inCall' => true,
+                        'inCall' => 1,
                         'lastPing' => 0,
                         'sessionId' => $guestSession,
                         'participantType' => Participant::GUEST,
@@ -317,16 +318,16 @@ class BackendNotifierTest extends \Test\TestCase {
         ], json_decode($body, true));
 
         $this->controller->clearLastRequest();
-        $room->changeInCall($userSession, false);
+        $room->changeInCall($userSession, 0);
         $request = $this->controller->getLastRequest();
         $body = $this->validateBackendRequest($this->baseUrl . '/api/v1/room/' . $room->getToken(), $request);
         $this->assertSame([
             'type' => 'incall',
             'incall' => [
-                'incall' => false,
+                'incall' => 0,
                 'changed' => [
                     [
-                        'inCall' => false,
+                        'inCall' => 0,
                         'lastPing' => 0,
                         'sessionId' => $userSession,
                         'participantType' => Participant::USER,
@@ -335,7 +336,7 @@ class BackendNotifierTest extends \Test\TestCase {
                 ],
                 'users' => [
                     [
-                        'inCall' => true,
+                        'inCall' => 1,
                         'lastPing' => 0,
                         'sessionId' => $guestSession,
                         'participantType' => Participant::GUEST,
