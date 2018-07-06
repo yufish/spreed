@@ -28,6 +28,7 @@ use OCA\Spreed\Config;
 use OCA\Spreed\GuestManager;
 use OCA\Spreed\HookListener;
 use OCA\Spreed\Notification\Notifier;
+use OCA\Spreed\Participant;
 use OCA\Spreed\Room;
 use OCA\Spreed\Signaling\BackendNotifier;
 use OCA\Spreed\Signaling\Messages;
@@ -66,6 +67,7 @@ class Application extends App {
 		$this->registerRoomInvitationHook($dispatcher);
 		$this->registerCallNotificationHook($dispatcher);
 		$this->registerChatHooks($dispatcher);
+		$this->registerRoomHooks($dispatcher);
 	}
 
 	protected function registerNotifier(IServerContainer $server) {
@@ -270,6 +272,54 @@ class Application extends App {
 			/** @var ChatManager $chatManager */
 			$chatManager = $this->getContainer()->query(ChatManager::class);
 			$chatManager->deleteMessages((string) $room->getId());
+		};
+		$dispatcher->addListener(Room::class . '::postDeleteRoom', $listener);
+	}
+
+	protected function registerRoomHooks(EventDispatcherInterface $dispatcher) {
+		$selfJoinedUserIdsPreDisconnect = [];
+		$listener = function(GenericEvent $event) use (&$selfJoinedUserIdsPreDisconnect) {
+			/** @var Room $room */
+			$room = $event->getSubject();
+
+			$users = $room->getParticipants()['users'];
+			$selfJoinedUserIdsPreDisconnect = array_keys(array_filter($users, function ($user) {
+				return $user['participantType'] === Participant::USER_SELF_JOINED;
+			}));
+		};
+		$dispatcher->addListener(Room::class . '::preUserDisconnectRoom', $listener);
+
+		$listener = function(GenericEvent $event) use (&$selfJoinedUserIdsPreDisconnect) {
+			/** @var Room $room */
+			$room = $event->getSubject();
+
+			/** @var \OCA\Spreed\Share\RoomShareProvider $roomShareProvider */
+			$roomShareProvider = $this->getContainer()->query(\OCA\Spreed\Share\RoomShareProvider::class);
+
+			$userIdsPostDisconnect = array_keys($room->getParticipants()['users']);
+			foreach (array_diff($selfJoinedUserIdsPreDisconnect, $userIdsPostDisconnect) as $disconnectedSelfJoinedUser) {
+				$roomShareProvider->deleteInRoom($room->getToken(), $disconnectedSelfJoinedUser);
+			}
+		};
+		$dispatcher->addListener(Room::class . '::postUserDisconnectRoom', $listener);
+
+		$listener = function(GenericEvent $event) {
+			/** @var Room $room */
+			$room = $event->getSubject();
+
+			/** @var \OCA\Spreed\Share\RoomShareProvider $roomShareProvider */
+			$roomShareProvider = $this->getContainer()->query(\OCA\Spreed\Share\RoomShareProvider::class);
+			$roomShareProvider->deleteInRoom($room->getToken(), $event->getArgument('user')->getUID());
+		};
+		$dispatcher->addListener(Room::class . '::postRemoveUser', $listener);
+
+		$listener = function(GenericEvent $event) {
+			/** @var Room $room */
+			$room = $event->getSubject();
+
+			/** @var \OCA\Spreed\Share\RoomShareProvider $roomShareProvider */
+			$roomShareProvider = $this->getContainer()->query(\OCA\Spreed\Share\RoomShareProvider::class);
+			$roomShareProvider->deleteInRoom($room->getToken());
 		};
 		$dispatcher->addListener(Room::class . '::postDeleteRoom', $listener);
 	}
