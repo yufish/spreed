@@ -114,7 +114,11 @@ class ChatManager {
 			// Update last_message
 			$chat->setLastMessage($comment);
 
-			$this->notifier->notifyMentionedUsers($chat, $comment);
+			$usersNotified = $this->notifier->notifyMentionedUsers($chat, $comment);
+			if ($usersNotified === 0 || $chat->getType() === Room::ONE_TO_ONE_CALL) {
+				// User was not mentioned, send a normal notification
+				$this->notifier->notifyOtherParticipant($chat, $comment);
+			}
 
 			$this->dispatcher->dispatch(self::class . '::sendMessage', new GenericEvent($chat, [
 				'comment' => $comment,

@@ -97,7 +97,7 @@ class Notifier implements INotifier {
 		if ($subject === 'call') {
 			return $this->parseCall($notification, $room, $l);
 		}
-		if ($subject === 'mention') {
+		if ($subject === 'mention' ||  $subject === 'chat') {
 			return $this->parseMention($notification, $room, $l);
 		}
 
@@ -157,7 +157,18 @@ class Notifier implements INotifier {
 		}
 		$notification->setParsedMessage($parsedMessage);
 
-		if ($room->getType() === Room::ONE_TO_ONE_CALL) {
+		if ($notification->getSubject() === 'chat') {
+			$notification
+				->setParsedSubject(
+					$l->t('%s sent you in a private message', [$user->getDisplayName()])
+				)
+				->setRichSubject(
+					$l->t('{user} sent you in a private message'), [
+						'user' => $richSubjectUser
+					]
+				);
+
+		} else if ($room->getType() === Room::ONE_TO_ONE_CALL) {
 			$notification
 				->setParsedSubject(
 					$l->t('%s mentioned you in a private conversation', [$user->getDisplayName()])
