@@ -68,6 +68,10 @@ class Room {
 	private $activeSince;
 	/** @var \DateTime|null */
 	private $lastActivity;
+	/** @var string */
+	private $objectType;
+	/** @var string */
+	private $objectId;
 
 	/** @var string */
 	protected $currentUser;
@@ -90,8 +94,10 @@ class Room {
 	 * @param int $activeGuests
 	 * @param \DateTime|null $activeSince
 	 * @param \DateTime|null $lastActivity
+	 * @param string $objectType
+	 * @param string $objectId
 	 */
-	public function __construct(Manager $manager, IDBConnection $db, ISecureRandom $secureRandom, EventDispatcherInterface $dispatcher, IHasher $hasher, $id, $type, $token, $name, $password, $activeGuests, \DateTime $activeSince = null, \DateTime $lastActivity = null) {
+	public function __construct(Manager $manager, IDBConnection $db, ISecureRandom $secureRandom, EventDispatcherInterface $dispatcher, IHasher $hasher, $id, $type, $token, $name, $password, $activeGuests, \DateTime $activeSince = null, \DateTime $lastActivity = null, $objectType = '', $objectId = '') {
 		$this->manager = $manager;
 		$this->db = $db;
 		$this->secureRandom = $secureRandom;
@@ -105,6 +111,8 @@ class Room {
 		$this->activeGuests = $activeGuests;
 		$this->activeSince = $activeSince;
 		$this->lastActivity = $lastActivity;
+		$this->objectType = $objectType;
+		$this->objectId = $objectId;
 	}
 
 	/**
@@ -154,6 +162,20 @@ class Room {
 	 */
 	public function getLastActivity() {
 		return $this->lastActivity;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getObjectType() {
+		return $this->objectType;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getObjectId() {
+		return $this->objectId;
 	}
 
 	/**
