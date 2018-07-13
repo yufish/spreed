@@ -35,6 +35,7 @@ use OCA\Spreed\Signaling\Messages;
 use OCP\AppFramework\App;
 use OCP\IServerContainer;
 use OCP\Settings\IManager;
+use OCP\Share\IShare;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\GenericEvent;
 
@@ -71,6 +72,7 @@ class Application extends App {
 		$this->registerChatHooks($dispatcher);
 		$this->registerClientLinks($server);
 		$this->registerPublicShareAuthHooks($dispatcher);
+		$this->registerLoadAdditionalScriptsHooks($dispatcher);
 	}
 
 	protected function registerNotifier(IServerContainer $server) {
@@ -331,5 +333,17 @@ class Application extends App {
 		$dispatcher->addListener(Room::class . '::postRemoveBySession', $listener);
 		$dispatcher->addListener(Room::class . '::postUserDisconnectRoom', $listener);
 		$dispatcher->addListener(Room::class . '::postCleanGuests', $listener);
+	}
+
+	protected function registerLoadAdditionalScriptsHooks(EventDispatcherInterface $dispatcher) {
+		$listener = function(GenericEvent $event) {
+			/** @var IShare $share */
+			$share = $event->getArgument('share');
+
+			/** @var \OCA\Spreed\PublicShareAuth\TemplateLoader $templateLoader */
+			$templateLoader = $this->getContainer()->query(\OCA\Spreed\PublicShareAuth\TemplateLoader::class);
+			$templateLoader->loadRequestPasswordByTalkUi($share);
+		};
+		$dispatcher->addListener('OCA\Files_Sharing::loadAdditionalScripts::publicShareAuth', $listener);
 	}
 }
