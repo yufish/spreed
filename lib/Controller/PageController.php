@@ -33,9 +33,11 @@ use OCA\Spreed\Room;
 use OCA\Spreed\TalkSession;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\AppFramework\Http\NotFoundResponse;
 use OCP\ILogger;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -180,6 +182,52 @@ class PageController extends Controller {
 		$csp->addAllowedMediaDomain('blob:');
 		$response->setContentSecurityPolicy($csp);
 		return $response;
+	}
+
+	/**
+	 * @PublicPage
+	 * @NoCSRFRequired
+	 *
+	 * @param string $token
+	 * @return NotFoundResponse|RedirectResponse
+	 */
+	public function shareAuth($token = ''): Response {
+		try {
+			$share = \OC::$server->getShareManager()->getShareByToken($token);
+		} catch (\OCP\Share\Exceptions\ShareNotFound $e) {
+			return new NotFoundResponse();
+		}
+
+		if (!$share->getSendPasswordByTalk()) {
+			return new NotFoundResponse();
+		}
+
+		$sharerUser = \OC::$server->getUserManager()->get($share->getSharedBy());
+
+		if (!$sharerUser instanceof \OCP\IUser) {
+			return new NotFoundResponse();
+		}
+
+		// Create the room
+		$room = $this->manager->createPublicRoom($share->getSharedWith(), 'share:password', $token);
+		$room->addUsers([
+			'userId' => $sharerUser->getUID(),
+			'participantType' => Participant::OWNER,
+		]);
+
+		// Notify the owner
+		$notification = $this->notificationManager->createNotification();
+		$notification
+			->setApp('spreed')
+			->setObject('room', $room->getId())
+			->setUser($sharerUser->getUID())
+			->setSubject('share:password', [
+				'sharedWith' => $share->getSharedWith(),
+			])
+			->setDateTime(new \DateTime());
+		$this->notificationManager->notify($notification);
+
+		return new RedirectResponse($this->url->linkToRoute('spreed.Page.index', ['token' => $room->getToken()]));
 	}
 
 	/**
