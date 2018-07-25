@@ -60,7 +60,7 @@ class PublicShareAuthController extends OCSController {
 	 * @param IL10N $l10n
 	 */
 	public function __construct(
-			$appName,
+			string $appName,
 			IRequest $request,
 			IUserManager $userManager,
 			NotificationManager $notificationManager,
@@ -98,7 +98,7 @@ class PublicShareAuthController extends OCSController {
 	 *         created, "200 OK" if an existing room is returned, or "404 Not
 	 *         found" if the given share was invalid.
 	 */
-	public function createRoom(string $shareToken) {
+	public function createRoom(string $shareToken): DataResponse {
 		try {
 			$share = $this->shareManager->getShareByToken($shareToken);
 		} catch (ShareNotFound $e) {
@@ -127,10 +127,8 @@ class PublicShareAuthController extends OCSController {
 			}
 		}
 
-		$roomName = $this->l10n->t("Password request by %s", [$share->getSharedWith()]);
-
 		// Create the room
-		$room = $this->manager->createPublicRoom($roomName, 'share:password', $shareToken);
+		$room = $this->manager->createPublicRoom($share->getSharedWith(), 'share:password', $shareToken);
 		$room->addUsers([
 			'userId' => $sharerUser->getUID(),
 			'participantType' => Participant::OWNER,
