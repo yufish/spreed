@@ -39,12 +39,12 @@ class Version4000Date20180710162342 extends SimpleMigrationStep {
 
 		if (!$table->hasColumn('object_type')) {
 			$table->addColumn('object_type', Type::STRING, [
-				'notnull' => true,
+				'notnull' => false,
 				'length' => 64,
 				'default' => '',
 			]);
 			$table->addColumn('object_id', Type::STRING, [
-				'notnull' => true,
+				'notnull' => false,
 				'length' => 64,
 				'default' => '',
 			]);
